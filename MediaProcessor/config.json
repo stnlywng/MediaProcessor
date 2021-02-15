@@ -1,0 +1,7 @@
+{
+	"video" : "test\\video1.mp4",
+	"audio" : "test\\music1.mp3",
+	"picture" : "test\\creativeteen_icon.png",
+	"input" : ".",
+	"outplut" : "."
+}
