@@ -2,13 +2,13 @@ package com.stanley.media.processor;
 
 import java.awt.BorderLayout;
 import java.awt.Container;
+import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.IOException;
 
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
@@ -16,6 +16,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -36,6 +37,13 @@ public class MediaProcessor {
 	static JFrame frame = null;
 	static Gson gson = new Gson();
 	static Configuration config = null;
+
+	private String currentInputpath = ".";
+	private FileChoosePanel videoChooser = null;
+	private FileChoosePanel audioChooser = null;
+	private FileChoosePanel pictureChooser = null;
+	private FolderChoosePanel inputFolderChooser = null;
+	private FolderChoosePanel outputFolderChooser = null;
 
 	public JMenuBar createMenuBar() {
 		JMenuBar menuBar;
@@ -86,7 +94,7 @@ public class MediaProcessor {
 						@Override
 						public void actionPerformed(ActionEvent e) {
 							runCommand("./ffmpeg/bin/ffmpeg.exe   -i " + config.getInput() + "/" + config.getVideo()
-							+  " " + config.getOutput() + "/" + config.getVideo()+".webm");
+									+ " " + config.getOutput() + "/" + config.getVideo() + ".webm");
 						}
 
 					});
@@ -106,23 +114,21 @@ public class MediaProcessor {
 	}
 
 	protected void runCommand(String command) {
-		System.out.println("runCommand ~ " + command);
-		Runtime rt = Runtime.getRuntime();
-		try {
-			Process pr = rt.exec(command);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		System.out.println("finish");
+		Thread one = new Thread() {
+			public void run() {
+				try {
+					System.out.println("runCommand ~ " + command);
+					Runtime rt = Runtime.getRuntime();
+					Process pr = rt.exec(command);
+					int exitVal = pr.waitFor();
+					System.out.println("finish");
+				} catch (Exception v) {
+					System.out.println(v);
+				}
+			}
+		};
+		one.start();
 	}
-
-	private String currentInputpath = ".";
-	private FileChooseButton videoChooser = null;
-	private FileChooseButton audioChooser = null;
-	private FileChooseButton pictureChooser = null;
-	private FolderChooseButton inputFolderChooser = null;
-	private FolderChooseButton outputFolderChooser = null;
 
 	public Container createContentPane() {
 		// Create the content-pane-to-be.
@@ -135,32 +141,32 @@ public class MediaProcessor {
 
 			buttons.setLayout(boxlayout);
 
-			videoChooser = new FileChooseButton("Video File", currentInputpath) {
+			videoChooser = new FileChoosePanel("Video File", currentInputpath) {
 				void updateConfig(String value) {
 					config.setVideo(value);
 					output.setText(gson.toJson(config));
 
 				}
 			};
-			audioChooser = new FileChooseButton("Audio File", currentInputpath) {
+			audioChooser = new FileChoosePanel("Audio File", currentInputpath) {
 				void updateConfig(String value) {
 					config.setAudio(value);
 					output.setText(gson.toJson(config));
 				}
 			};
-			pictureChooser = new FileChooseButton("Picture File", currentInputpath) {
+			pictureChooser = new FileChoosePanel("Picture File", currentInputpath) {
 				void updateConfig(String value) {
 					config.setPicture(value);
 					output.setText(gson.toJson(config));
 				}
 			};
-			inputFolderChooser = new FolderChooseButton("Input File", currentInputpath) {
+			inputFolderChooser = new FolderChoosePanel("Input File", currentInputpath) {
 				void updateConfig(String value) {
 					config.setInput(value);
 					output.setText(gson.toJson(config));
 				}
 			};
-			outputFolderChooser = new FolderChooseButton("Output File", currentInputpath) {
+			outputFolderChooser = new FolderChoosePanel("Output File", currentInputpath) {
 				void updateConfig(String value) {
 					config.setOutput(value);
 					output.setText(gson.toJson(config));
@@ -237,17 +243,31 @@ public class MediaProcessor {
 	}
 
 	//
-	private abstract class FileChooseButton extends JButton {
+	private abstract class FileChoosePanel extends JPanel {
 		abstract void updateConfig(String value);
+
+		JButton button = null;
+		JLabel label = null;
 
 		ActionListener actionListener = null;
 		JFileChooser fileChooser = null;
 		File file = null;
 
-		FileChooseButton(String text, String curFolder) {
-			this.setText(text);
-			this.fileChooser = new JFileChooser(curFolder);
-			this.fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+		FileChoosePanel(String text, String curFolder) {
+			this.setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+			
+			button = new JButton(text);
+			button.setSize(200, 50);
+			button.setPreferredSize(new Dimension(200, 50));
+			this.add(button);
+			
+			label = new JLabel("");
+			label.setSize(300, 50);
+			label.setPreferredSize(new Dimension(300, 50));
+			this.add(label);
+
+			fileChooser = new JFileChooser(curFolder);
+			fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
 
 			actionListener = new ActionListener() {
 				@Override
@@ -255,28 +275,38 @@ public class MediaProcessor {
 					int option = fileChooser.showOpenDialog(frame);
 					if (option == JFileChooser.APPROVE_OPTION) {
 						file = fileChooser.getSelectedFile();
-						setText(getText() + "...." + file.getName());
+						label.setText(file.getName());
 						updateConfig(file.getName());
 					}
 				}
 			};
 
-			this.addActionListener(actionListener);
+			button.addActionListener(actionListener);
 		}
 	}
 
 	//
-	private abstract class FolderChooseButton extends JButton {
+	private abstract class FolderChoosePanel extends JPanel {
 		abstract void updateConfig(String value);
+
+		JButton button = null;
+		JLabel label = null;
 
 		ActionListener actionListener = null;
 		JFileChooser fileChooser = null;
 		File file = null;
 
-		FolderChooseButton(String text, String curFolder) {
-			this.setText(text);
-			this.fileChooser = new JFileChooser(curFolder);
-			this.fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		FolderChoosePanel(String text, String curFolder) {
+			this.setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+			button = new JButton();
+			button.setSize(200, 50);
+			this.add(button);
+			label = new JLabel();
+			label.setSize(300, 50);
+			this.add(label);
+			button.setText(text);
+			fileChooser = new JFileChooser(curFolder);
+			fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 
 			actionListener = new ActionListener() {
 				@Override
@@ -284,13 +314,13 @@ public class MediaProcessor {
 					int option = fileChooser.showOpenDialog(frame);
 					if (option == JFileChooser.APPROVE_OPTION) {
 						file = fileChooser.getSelectedFile();
-						setText(getText() + "...." + file.getPath());
+						label.setText(file.getPath());
 						updateConfig(file.getPath());
 					}
 				}
 			};
 
-			this.addActionListener(actionListener);
+			button.addActionListener(actionListener);
 		}
 	}
 
