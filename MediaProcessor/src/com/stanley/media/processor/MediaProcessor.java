@@ -45,6 +45,8 @@ public class MediaProcessor {
 	private FolderChoosePanel inputFolderChooser = null;
 	private FolderChoosePanel outputFolderChooser = null;
 
+	private File curVideo = null;
+
 	public JMenuBar createMenuBar() {
 		JMenuBar menuBar;
 		JMenu menu, submenu;
@@ -94,12 +96,37 @@ public class MediaProcessor {
 						@Override
 						public void actionPerformed(ActionEvent e) {
 							runCommand("./ffmpeg/bin/ffmpeg.exe   -i " + config.getInput() + "/" + config.getVideo()
-									+ " " + config.getOutput() + "/" + config.getVideo() + ".webm");
+									+ " " + config.getOutput() + "/" + config.getVideo() + ".mp4");
+							MediaProcessor.this.curVideo = new File(
+									config.getOutput() + "/" + config.getVideo() + ".mp4");
 						}
 
 					});
 				}
 			}
+			{
+				menuItem = new JMenuItem("Upload Video", KeyEvent.VK_U);
+				// menuItem.setMnemonic(KeyEvent.VK_T); //used constructor instead
+				menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_3, ActionEvent.ALT_MASK));
+				menuItem.getAccessibleContext().setAccessibleDescription("Uploads the Video");
+				{
+					menuItem.addActionListener(new ActionListener() {
+
+						@Override
+						public void actionPerformed(ActionEvent e) {
+
+							// winscp "User:pw@Host" /command "put C:\File.txt /Home/" "exit"
+							runCommand("winscp \"User:ubuntu@3.141.216.183\" /command \"put "
+									+ MediaProcessor.this.curVideo.getPath() + " /home/ubuntu/\" \"exit\"");
+
+							insertPage("newMP4", "/home/ubuntu/" + MediaProcessor.this.curVideo.getName());
+						}
+
+					});
+				}
+				menu.add(menuItem);
+			}
+
 		}
 
 		{
@@ -255,12 +282,12 @@ public class MediaProcessor {
 
 		FileChoosePanel(String text, String curFolder) {
 			this.setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-			
+
 			button = new JButton(text);
 			button.setSize(200, 50);
 			button.setPreferredSize(new Dimension(200, 50));
 			this.add(button);
-			
+
 			label = new JLabel("");
 			label.setSize(300, 50);
 			label.setPreferredSize(new Dimension(300, 50));
@@ -324,4 +351,37 @@ public class MediaProcessor {
 		}
 	}
 
+	
+	
+	private void insertPage(String title, String videopath) {
+		MySQLUtil.init("jdbc:mysql://3.141.216.183:3306/wordpress?useUnicode=true&characterEncoding=UTF-8", "wordpress", "wordpress");
+		MySQLUpdater.catchMax();
+		//insert(Str, String title, String content,)
+		MySQLUpdater.insert("temp", "<iframe width=\"420\" height=\"315\"\r\n"
+				+ "src=\"https://www.youtube.com/embed/tgbNymZ7vqY\">\r\n"
+				+ "</iframe>");
+	}
+	
+	
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
